@@ -396,6 +396,31 @@
     padding-top: 16px; border-top: 1px solid var(--rule);
   }
 
+
+  .chip-star { color: #b45309; border-color: #fcd34d; background: #fffbeb; font-size:12px; cursor:pointer; }
+  @media (prefers-color-scheme: dark) { .chip-star { background: #2c1f08; border-color: #78350f; } }
+
+  .task-card.due-soon { border-left: 3px solid var(--amber); }
+  .task-card.overdue  { border-left: 3px solid var(--red); background: rgba(220,38,38,0.04); }
+  @media (prefers-color-scheme: dark) {
+    .task-card.overdue { background: rgba(220,38,38,0.08); }
+  }
+  .deadline-warn { font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; border:1px solid; margin-left:4px; }
+  .dw-soon     { color: #92400e; border-color:#fcd34d; background:#fffbeb; }
+  .dw-overdue  { color: var(--red); border-color:#fca5a5; background:#fef2f2; }
+  @media (prefers-color-scheme: dark) {
+    .dw-soon    { background:#2c1f08; border-color:#78350f; color:var(--amber); }
+    .dw-overdue { background:#2c1010; border-color:#7f1d1d; }
+  }
+  .task-card.starred .task-title::before { content: '★ '; color: #d97706; }
+  .sort-bar { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
+  .sort-btn { background:none; border:1px solid var(--rule); border-radius:6px; padding:4px 10px; font-family:'DM Sans',sans-serif; font-size:11px; color:var(--ink3); cursor:pointer; transition:all 0.15s; font-weight:500; letter-spacing:0.3px; }
+  .sort-btn:hover { border-color:var(--ink3); color:var(--ink); }
+  .sort-btn.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .edit-inline { background:var(--paper2); border-radius:8px; padding:12px 14px; margin-top:8px; }
+  .edit-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+  .edit-row:last-child { margin-bottom:0; }
+  .edit-label { font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink3); min-width:52px; font-weight:500; }
   @media (max-width: 560px) {
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .field-row { grid-template-columns: 1fr; }
@@ -498,7 +523,12 @@
   </div>
 
   <div class="section-label">進行中 <span id="aC" style="color:var(--ink3)"></span></div>
-  <div id="aList" class="task-list" style="margin-bottom:40px"></div>
+    <div class="sort-bar">
+    <button class="sort-btn active" id="sortCreated" onclick="setSort('created')">建立時間</button>
+    <button class="sort-btn" id="sortDeadline" onclick="setSort('deadline')">截止日期</button>
+    <button class="sort-btn" id="sortStar" onclick="setSort('star')">重要優先</button>
+  </div>
+<div id="aList" class="task-list" style="margin-bottom:40px"></div>
 
   <button class="done-toggle" onclick="toggleDone()" id="dBtn">▸ 顯示已完成</button>
   <div id="dSec" style="display:none">
@@ -556,14 +586,25 @@ function init() {
   if(cfg.email){document.getElementById('eIn').value=cfg.email;showES();}
   chkN(); render();
   setInterval(chkRem,60000); chkRem(); chkWeekly();
-  // 開啟時自動同步 Line 任務
   setTimeout(fetchFromGitHub, 1500);
+  setTimeout(checkDeadlineAlerts, 2000);
+}
+
+function checkDeadlineAlerts() {
+  const overdue = tasks.filter(t => !t.done && deadlineState(t) === 'overdue');
+  const soon    = tasks.filter(t => !t.done && deadlineState(t) === 'soon');
+  if (overdue.length > 0) {
+    setTimeout(() => toast(`⚠️ 有 ${overdue.length} 個任務已過期！`), 0);
+  }
+  if (soon.length > 0) {
+    setTimeout(() => toast(`⏳ 有 ${soon.length} 個任務 3 天內到期`), 800);
+  }
 }
 
 function tick(){document.getElementById('hDate').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});}
 
 function render(){
-  const a=tasks.filter(t=>!t.done), d=tasks.filter(t=>t.done);
+  const a=getSorted(tasks.filter(t=>!t.done)), d=tasks.filter(t=>t.done);
   document.getElementById('aC').textContent=a.length?`${a.length} 項`:'';
   rList('aList',a); rList('dList',d); stats();
 }
@@ -577,12 +618,17 @@ function rList(id,list){
 function card(t){
   const dl=t.deadline?new Date(t.deadline).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
   const fired=(t.reminders||[]).filter(r=>r.fired).length, total=(t.reminders||[]).length;
+  const dlState = deadlineState(t);
   const chips=[
+    t.starred?`<span class="chip chip-star" onclick="event.stopPropagation();toggleStar('${t.id}')">★ 重要</span>`:'',
     t.type==='urgent'?`<span class="chip cu">緊急</span>`:'',
     t.type==='monitor'?`<span class="chip cm">定期查看</span>`:'',
+    dlState==='overdue'?`<span class="deadline-warn dw-overdue">⚠ 已過期</span>`:'',
+    dlState==='soon'?`<span class="deadline-warn dw-soon">⏳ 即將到期</span>`:'',
     dl?`<span class="chip cd">⏰ ${dl}</span>`:'',
     total?`<span class="chip cr">提醒 ${fired}/${total}</span>`:'',
     t.done?`<span class="chip ck">完成</span>`:'',
+    t.fromLine?`<span class="chip" style="color:var(--ink3);border-color:var(--rule);background:var(--paper2);font-size:10px">Line</span>`:'',
   ].join('');
 
   const urlsH=(t.urls||[]).length?`
@@ -602,7 +648,38 @@ function card(t){
 
   const noteH=t.note?`<div class="esec"><div class="enote">${e(t.note)}</div></div>`:''
 
-  return `<div class="task-card ${t.done?'done':''}" id="c-${t.id}">
+  // inline edit section
+  const editH=`<div class="esec edit-inline">
+    <div class="elabel" style="margin-bottom:10px">編輯任務</div>
+    <div class="edit-row">
+      <span class="edit-label">截止日</span>
+      <input class="field-input" id="ed-dl-${t.id}" type="datetime-local" value="${t.deadline||''}" style="flex:1;font-size:12px;padding:7px 10px" />
+    </div>
+    <div class="edit-row">
+      <span class="edit-label">類型</span>
+      <select class="field-input" id="ed-tp-${t.id}" style="flex:1;font-size:12px;padding:7px 10px">
+        <option value="normal" ${(!t.type||t.type==='normal')?'selected':''}>一般任務</option>
+        <option value="urgent" ${t.type==='urgent'?'selected':''}>⚡ 緊急</option>
+        <option value="monitor" ${t.type==='monitor'?'selected':''}>👁 定期查看</option>
+      </select>
+    </div>
+    <div class="edit-row">
+      <span class="edit-label">提醒</span>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">
+        ${['前一天','前3小時','前1小時','前30分鐘','每天 09:00','每天 21:00'].map(p=>`<button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="addPresetToTask('${t.id}','${p}')">${p}</button>`).join('')}
+      </div>
+    </div>
+    <div class="edit-row">
+      <span class="edit-label">備註</span>
+      <input class="field-input" id="ed-nt-${t.id}" value="${e(t.note||'')}" placeholder="備註說明" style="flex:1;font-size:12px;padding:7px 10px" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+      <button class="btn-out" style="font-size:12px;padding:7px 14px" onclick="toggleStar('${t.id}')">${t.starred?'取消重要':'★ 標記重要'}</button>
+      <button class="btn-main" style="font-size:12px;padding:7px 14px" onclick="saveEdit('${t.id}')">儲存</button>
+    </div>
+  </div>`;
+
+  return `<div class="task-card ${t.done?'done':''} ${t.starred?'starred':''} ${dlState==='overdue'?'overdue':dlState==='soon'?'due-soon':''}" id="c-${t.id}">
     <div class="task-row" onclick="exp('${t.id}')">
       <div class="chk ${t.done?'on':''}" onclick="event.stopPropagation();tog('${t.id}')">${t.done?'✓':''}</div>
       <div class="task-body">
@@ -625,6 +702,7 @@ function card(t){
           </div>
         </div>
         ${remH}
+        ${editH}
       </div>
     </div>
   </div>`;
@@ -886,6 +964,94 @@ async function fetchFromGitHub() {
     toast('同步失敗，請稍後再試');
     console.error(err);
   }
+}
+
+
+let sortMode = 'created';
+
+function setSort(mode) {
+  sortMode = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sort' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  render();
+}
+
+function deadlineState(t) {
+  if (!t.deadline || t.done) return 'normal';
+  const now = Date.now();
+  const dl = new Date(t.deadline).getTime();
+  if (dl < now) return 'overdue';
+  if (dl - now < 3 * 86400000) return 'soon';
+  return 'normal';
+}
+
+function getSorted(list) {
+  const arr = [...list];
+  if (sortMode === 'deadline') {
+    arr.sort((a,b) => {
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return new Date(a.deadline) - new Date(b.deadline);
+    });
+  } else if (sortMode === 'star') {
+    arr.sort((a,b) => {
+      if (a.starred && !b.starred) return -1;
+      if (!a.starred && b.starred) return 1;
+      return 0;
+    });
+  }
+  // Priority: overdue first, then soon, then starred, then rest
+  arr.sort((a,b) => {
+    const pa = deadlineState(a)==='overdue'?0:deadlineState(a)==='soon'?1:a.starred?2:3;
+    const pb = deadlineState(b)==='overdue'?0:deadlineState(b)==='soon'?1:b.starred?2:3;
+    return pa - pb;
+  });
+  return arr;
+}
+
+function toggleStar(id) {
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  t.starred = !t.starred;
+  sv(); render();
+  setTimeout(()=>exp(id), 10);
+}
+
+function saveEdit(id) {
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  const dl = document.getElementById('ed-dl-'+id)?.value || '';
+  const tp = document.getElementById('ed-tp-'+id)?.value || 'normal';
+  const nt = document.getElementById('ed-nt-'+id)?.value || '';
+  t.deadline = dl;
+  t.type = tp;
+  t.note = nt;
+  sv(); render(); toast('已儲存！');
+  setTimeout(()=>exp(id), 10);
+}
+
+function addPresetToTask(id, label) {
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  if (!t.deadline) { toast('請先設定截止日期再加提醒'); return; }
+  const dl = new Date(t.deadline).getTime();
+  const presetMap = {
+    '前一天': dl-86400000, '前3小時': dl-10800000,
+    '前1小時': dl-3600000, '前30分鐘': dl-1800000,
+  };
+  let time;
+  if (presetMap[label]) {
+    time = presetMap[label];
+  } else if (label === '每天 09:00' || label === '每天 21:00') {
+    const hr = label.includes('09') ? 9 : 21;
+    const d = new Date(); d.setHours(hr,0,0,0);
+    if (d.getTime() <= Date.now()) d.setDate(d.getDate()+1);
+    time = d.getTime();
+  }
+  if (!time || time <= Date.now()) { toast('提醒時間已過，無法設定'); return; }
+  if (!t.reminders) t.reminders = [];
+  if (t.reminders.find(r=>r.time===time)) { toast('已有相同提醒時間'); return; }
+  t.reminders.push({time, fired:false, label});
+  sv(); render(); toast('提醒已加入！');
+  setTimeout(()=>exp(id), 10);
 }
 
 
