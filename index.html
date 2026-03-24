@@ -483,11 +483,10 @@
     <div class="field field-row">
       <div>
         <label class="field-label">截止日期</label>
-        <input class="field-input" id="iD" type="datetime-local" />
+        <input class="field-input" id="iDdate" type="date" />
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-          <button class="preset-btn" onclick="setDeadlineQuick('today')">今天 23:59</button>
-          <button class="preset-btn" onclick="setDeadlineQuick('today_jp')">今天 22:59 🇯🇵</button>
-          <button class="preset-btn" onclick="setDeadlineQuick('tomorrow')">明天 23:59</button>
+          <button class="preset-btn" onclick="setDeadlineTime('23:59')">當日結束 23:59</button>
+          <button class="preset-btn" onclick="setDeadlineTime('22:59')">當日結束 22:59 🇯🇵</button>
         </div>
       </div>
       <div>
@@ -690,14 +689,13 @@ function card(t){
     <div class="elabel" style="margin-bottom:10px">編輯任務</div>
     <div class="edit-row">
       <span class="edit-label">截止日</span>
-      <input class="field-input" id="ed-dl-${t.id}" type="datetime-local" value="${t.deadline||''}" style="flex:1;font-size:12px;padding:7px 10px" />
+      <input class="field-input" id="ed-dl-${t.id}" type="date" value="${t.deadline?t.deadline.split('T')[0]:''}" style="flex:1;font-size:12px;padding:7px 10px" />
     </div>
     <div class="edit-row">
       <span class="edit-label"></span>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineQuick('${t.id}','today')">今天 23:59</button>
-        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineQuick('${t.id}','today_jp')">今天 22:59 🇯🇵</button>
-        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineQuick('${t.id}','tomorrow')">明天 23:59</button>
+        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineTime('${t.id}','23:59')">當日結束 23:59</button>
+        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineTime('${t.id}','22:59')">當日結束 22:59 🇯🇵</button>
       </div>
     </div>
     <div class="edit-row">
@@ -828,7 +826,13 @@ function buildReminders(dlStr){
 function addTask(){
   const title=document.getElementById('iT').value.trim();
   if(!title){toast('請輸入任務名稱');return;}
-  const reminders=buildReminders(document.getElementById('iD').value);
+  // build deadline from date + time button
+  const dateVal = document.getElementById('iDdate').value;
+  const deadlineVal = cfg._pendingDeadline && cfg._pendingDeadline.startsWith(dateVal)
+    ? cfg._pendingDeadline
+    : dateVal ? dateVal + 'T23:59' : '';
+  cfg._pendingDeadline = null;
+  const reminders=buildReminders(deadlineVal);
   const urls=[];
   document.querySelectorAll('.ur').forEach(row=>{
     const l=row.querySelector('.ul').value.trim(),u=row.querySelector('.uu').value.trim();
@@ -836,14 +840,14 @@ function addTask(){
   });
   tasks.unshift({
     id:Date.now().toString(),title,
-    deadline:document.getElementById('iD').value,
+    deadline:deadlineVal,
     type:document.getElementById('iK').value,
     note:document.getElementById('iN').value.trim(),
     urls,reminders,done:false,doneAt:null,onTime:false,createdAt:Date.now()
   });
   sv();render();chkRem();
   ['iT','iN'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('iD').value='';document.getElementById('iK').value='normal';
+  document.getElementById('iDdate').value='';document.getElementById('iK').value='normal';
   document.getElementById('rBlock').innerHTML='';document.getElementById('uBlock').innerHTML='';
   pendingPresets=[];renderPTags();
   addR();addU();toast('任務建立');
@@ -1044,27 +1048,24 @@ function getDailyHourMin(type) {
 }
 
 
-function fmtLocalDatetime(d) {
-  const pad = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function setDeadlineTime(time) {
+  const dateEl = document.getElementById('iDdate');
+  if (!dateEl.value) { toast('請先選擇日期'); return; }
+  // store as datetime string internally
+  cfg._pendingDeadline = dateEl.value + 'T' + time;
+  toast('截止時間設定為 ' + dateEl.value + ' ' + time);
 }
 
-function getQuickDeadline(type) {
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (type === 'today')    { d.setHours(23,59,0,0); }
-  if (type === 'today_jp') { d.setHours(22,59,0,0); }
-  if (type === 'tomorrow') { d.setDate(d.getDate()+1); d.setHours(23,59,0,0); }
-  return fmtLocalDatetime(d);
-}
-
-function setDeadlineQuick(type) {
-  document.getElementById('iD').value = getQuickDeadline(type);
-}
-
-function setEditDeadlineQuick(id, type) {
-  const el = document.getElementById('ed-dl-'+id);
-  if (el) el.value = getQuickDeadline(type);
+function setEditDeadlineTime(id, time) {
+  const dateEl = document.getElementById('ed-dl-'+id);
+  if (!dateEl.value) { toast('請先選擇日期'); return; }
+  dateEl.dataset.time = time;
+  dateEl.style.borderColor = 'var(--green)';
+  // show feedback
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '✓ 已選';
+  setTimeout(() => btn.textContent = orig, 1500);
 }
 
 
@@ -1111,7 +1112,10 @@ function toggleStar(id) {
 
 function saveEdit(id) {
   const t = tasks.find(x=>x.id===id); if(!t) return;
-  const dl = document.getElementById('ed-dl-'+id)?.value || '';
+  const dateEl = document.getElementById('ed-dl-'+id);
+  const dateVal = dateEl?.value || '';
+  const timeVal = dateEl?.dataset.time || '23:59';
+  const dl = dateVal ? dateVal + 'T' + timeVal : '';
   const tp = document.getElementById('ed-tp-'+id)?.value || 'normal';
   const nt = document.getElementById('ed-nt-'+id)?.value || '';
   t.deadline = dl;
