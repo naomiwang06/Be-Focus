@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#faf9f6">
+<title>FocusPal</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #faf9f6;
+    --paper2: #f3f1ec;
+    --paper3: #ede9e2;
+    --ink: #1c1917;
+    --ink2: #57534e;
+    --ink3: #a8a29e;
+    --rule: #e7e4de;
+    --red: #dc2626;
+    --amber: #d97706;
+    --green: #16a34a;
+    --blue: #2563eb;
+    --accent: #c2410c;
+    --radius: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1c1a17;
+      --paper2: #242018;
+      --paper3: #2e2920;
+      --ink: #f5f0e8;
+      --ink2: #a8a29e;
+      --ink3: #57534e;
+      --rule: #2e2920;
+      --accent: #ea580c;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .app {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .header {
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1.5px solid var(--ink);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header h1 {
+    font-family: 'Lora', serif;
+    font-size: 32px;
+    font-weight: 400;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .header p { font-size: 13px; color: var(--ink3); }
+
+  .header-date { font-size: 12px; color: var(--ink3); text-align: right; line-height: 1.7; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+
+  .stat { background: var(--paper); padding: 16px 14px; text-align: center; }
+
+  .stat-num {
+    font-family: 'Lora', serif;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .amber { color: var(--amber); }
+  .green { color: var(--green); }
+  .red   { color: var(--red); }
+  .blue  { color: var(--blue); }
+
+  .stat-label { font-size: 11px; color: var(--ink3); letter-spacing: 0.4px; text-transform: uppercase; }
+
+  .notif-bar {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #92400e;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .add-form {
+    background: var(--paper2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 40px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field-label { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ink3); margin-bottom: 7px; }
+
+  .field-input {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+
+  .field-input:focus { outline: none; border-color: var(--ink2); }
+  .field-input::placeholder { color: var(--ink3); }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .sub-block {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .entry { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .entry:last-child { margin-bottom: 0; }
+
+  .btn-x {
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink3);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .btn-x:hover { background: var(--paper3); color: var(--red); }
+
+  .btn-more {
+    background: none; border: none;
+    font-size: 12px; color: var(--ink3);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    padding: 4px 0; display: block; margin-top: 8px;
+    transition: color 0.15s;
+  }
+
+  .btn-more:hover { color: var(--ink); }
+
+  .form-footer {
+    display: flex; justify-content: flex-end;
+    margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .btn-main {
+    background: var(--ink); color: var(--paper);
+    border: none; border-radius: 8px;
+    padding: 11px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+
+  .btn-main:hover { opacity: 0.8; }
+
+  .task-card { border-bottom: 1px solid var(--rule); animation: fi 0.2s ease; }
+  .task-card:first-child { border-top: 1px solid var(--rule); }
+
+  @keyframes fi { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+  .task-row {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 0; cursor: pointer;
+  }
+
+  .chk {
+    width: 20px; height: 20px;
+    border: 1.5px solid var(--ink3);
+    border-radius: 4px;
+    flex-shrink: 0; cursor: pointer;
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-size: 11px; color: transparent;
+  }
+
+  .chk:hover { border-color: var(--green); }
+  .chk.on { background: var(--green); border-color: var(--green); color: white; }
+
+  .task-body { flex: 1; min-width: 0; }
+
+  .task-title { font-size: 15px; font-weight: 400; color: var(--ink); margin-bottom: 4px; }
+  .task-card.done .task-title { text-decoration: line-through; color: var(--ink3); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  .chip {
+    font-size: 11px; padding: 2px 8px;
+    border-radius: 4px; border: 1px solid;
+  }
+
+  .cu { color: var(--red);   border-color: #fca5a5; background: #fef2f2; }
+  .cm { color: var(--blue);  border-color: #bfdbfe; background: #eff6ff; }
+  .cd { color: var(--ink2);  border-color: var(--rule); background: var(--paper2); font-size: 10.5px; }
+  .cr { color: var(--amber); border-color: #fde68a; background: #fffbeb; }
+  .ck { color: var(--green); border-color: #bbf7d0; background: #f0fdf4; }
+
+  @media (prefers-color-scheme: dark) {
+    .cu { background: #2c1010; border-color: #7f1d1d; }
+    .cm { background: #0f1c3a; border-color: #1e3a5f; }
+    .cr { background: #2c1f08; border-color: #78350f; }
+    .ck { background: #0a1f0e; border-color: #14532d; }
+  }
+
+  .task-acts { display: flex; gap: 4px; flex-shrink: 0; }
+
+  .tbtn {
+    background: none; border: none;
+    cursor: pointer; color: var(--ink3);
+    font-size: 13px; padding: 4px 6px;
+    border-radius: 4px; transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .tbtn:hover { background: var(--paper3); color: var(--ink); }
+  .tbtn.del:hover { color: var(--red); }
+
+  .task-expand { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+  .task-expand.open { max-height: 800px; }
+
+  .expand-in { padding: 0 0 16px 34px; }
+
+  .esec { margin-bottom: 14px; }
+
+  .elabel {
+    font-size: 10.5px; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--ink3);
+    margin-bottom: 7px; font-weight: 500;
+  }
+
+  .url-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid var(--rule);
+  }
+
+  .url-row:last-child { border-bottom: none; }
+  .url-tag { font-size: 12px; color: var(--ink3); min-width: 80px; flex-shrink: 0; }
+  .url-link { font-size: 13px; color: var(--blue); text-decoration: none; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .url-link:hover { text-decoration: underline; }
+
+  .rem-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 0; border-bottom: 1px solid var(--rule);
+    font-size: 13px; color: var(--ink2);
+  }
+
+  .rem-row:last-child { border-bottom: none; }
+  .rs { font-size: 11px; color: var(--ink3); }
+  .rs.ok { color: var(--green); }
+
+  .add-url-inline { display: flex; gap: 8px; margin-top: 8px; }
+
+  .enote {
+    font-size: 13px; color: var(--ink2);
+    font-style: italic; font-family: 'Lora', serif;
+    border-left: 2px solid var(--rule);
+    padding-left: 12px; line-height: 1.7;
+  }
+
+  .done-toggle {
+    background: none; border: none;
+    font-size: 13px; color: var(--ink3);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    padding: 8px 0; transition: color 0.15s; display: block; margin-bottom: 12px;
+  }
+
+  .done-toggle:hover { color: var(--ink); }
+
+  .empty {
+    padding: 40px 0; text-align: center;
+    color: var(--ink3); font-size: 14px;
+    font-family: 'Lora', serif; font-style: italic;
+  }
+
+  .report-section {
+    border-top: 1.5px solid var(--ink);
+    padding-top: 32px; margin-top: 16px;
+  }
+
+  .report-section h2 {
+    font-family: 'Lora', serif;
+    font-size: 20px; font-weight: 400; margin-bottom: 8px;
+  }
+
+  .report-sub { font-size: 13px; color: var(--ink3); margin-bottom: 20px; line-height: 1.7; }
+
+  .email-row { display: flex; gap: 10px; align-items: center; }
+
+  .report-acts { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+  .btn-out {
+    background: none; border: 1px solid var(--rule);
+    border-radius: 8px; padding: 9px 16px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--ink2); cursor: pointer; transition: all 0.15s;
+  }
+
+  .btn-out:hover { border-color: var(--ink3); color: var(--ink); }
+
+  .toast-wrap {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%); z-index: 100;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: center; pointer-events: none;
+  }
+
+  .toast {
+    background: var(--ink); color: var(--paper);
+    border-radius: 8px; padding: 10px 18px;
+    font-size: 13px; animation: ti 0.2s ease;
+    white-space: nowrap; pointer-events: none;
+  }
+
+  @keyframes ti { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35); z-index: 50;
+    display: none; align-items: center;
+    justify-content: center; padding: 20px;
+  }
+
+  .modal-box {
+    background: var(--paper); border-radius: var(--radius);
+    padding: 28px; max-width: 500px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+  }
+
+  .modal-box h2 { font-family: 'Lora', serif; font-size: 20px; font-weight: 400; margin-bottom: 16px; }
+
+  .modal-body { font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: var(--ink2); margin-bottom: 20px; }
+
+  .modal-foot {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding-top: 16px; border-top: 1px solid var(--rule);
+  }
+
+  @media (max-width: 560px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .field-row { grid-template-columns: 1fr; }
+  }
+
+  .preset-btn {
+    background: var(--paper); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 5px 11px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px;
+    color: var(--ink2); cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .preset-btn:hover { border-color: var(--ink3); color: var(--ink); background: var(--paper3); }
+
+  .preset-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 6px; padding: 4px 10px;
+    font-size: 12px; color: #92400e;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .preset-tag { background: #2c1f08; border-color: #78350f; color: var(--amber); }
+  }
+
+  .preset-tag button { background:none;border:none;cursor:pointer;color:inherit;font-size:12px;padding:0;line-height:1;opacity:0.7; }
+  .preset-tag button:hover { opacity:1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <div>
+      <h1>FocusPal</h1>
+      <p>你的任務筆記本</p>
+    </div>
+    <div class="header-date" id="hDate"></div>
+  </header>
+
+  <div class="notif-bar" id="nBar">
+    <span>請允許通知，才能在對的時間提醒你</span>
+    <button class="btn-out" style="font-size:12px;padding:6px 12px" onclick="reqN()">允許通知</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num amber" id="sS">0</div><div class="stat-label">連續週</div></div>
+    <div class="stat"><div class="stat-num green" id="sD">0</div><div class="stat-label">本週完成</div></div>
+    <div class="stat"><div class="stat-num red"   id="sU">0</div><div class="stat-label">緊急任務</div></div>
+    <div class="stat"><div class="stat-num blue"  id="sR">—</div><div class="stat-label">完成率</div></div>
+  </div>
+
+  <div class="add-form">
+    <div class="section-label" style="margin-bottom:20px">新增任務</div>
+    <div class="field">
+      <label class="field-label">任務名稱</label>
+      <input class="field-input" id="iT" placeholder="例：取消 WordPress 試用" />
+    </div>
+    <div class="field field-row">
+      <div>
+        <label class="field-label">截止日期</label>
+        <input class="field-input" id="iD" type="datetime-local" />
+      </div>
+      <div>
+        <label class="field-label">類型</label>
+        <select class="field-input" id="iK">
+          <option value="normal">一般任務</option>
+          <option value="urgent">⚡ 緊急</option>
+          <option value="monitor">👁 定期查看</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">提醒時間</label>
+      <div class="sub-block" id="rBlock"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px" id="presetBtns">
+        <button class="preset-btn" onclick="addPreset('1d')">前一天</button>
+        <button class="preset-btn" onclick="addPreset('3h')">前3小時</button>
+        <button class="preset-btn" onclick="addPreset('1h')">前1小時</button>
+        <button class="preset-btn" onclick="addPreset('30m')">前30分鐘</button>
+        <button class="preset-btn" onclick="addPreset('daily9')">每天早上9點</button>
+        <button class="preset-btn" onclick="addPreset('daily21')">每天晚上9點</button>
+        <button class="preset-btn" onclick="addR()">自訂時間…</button>
+      </div>
+      <div id="presetTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+    </div>
+    <div class="field">
+      <label class="field-label">備註</label>
+      <input class="field-input" id="iN" placeholder="補充說明、密碼、細節…" />
+    </div>
+    <div class="field">
+      <label class="field-label">相關網址</label>
+      <div class="sub-block" id="uBlock"></div>
+      <button class="btn-more" onclick="addU()">+ 增加網址</button>
+    </div>
+    <div class="form-footer">
+      <button class="btn-main" onclick="addTask()">建立任務</button>
+    </div>
+  </div>
+
+  <div class="section-label">進行中 <span id="aC" style="color:var(--ink3)"></span></div>
+  <div id="aList" class="task-list" style="margin-bottom:40px"></div>
+
+  <button class="done-toggle" onclick="toggleDone()" id="dBtn">▸ 顯示已完成</button>
+  <div id="dSec" style="display:none">
+    <div class="section-label">已完成</div>
+    <div id="dList" class="task-list" style="margin-bottom:40px"></div>
+  </div>
+
+  <div class="report-section">
+    <h2>每週好棒信</h2>
+    <div class="report-sub">每週日晚上 9 點，FocusPal 會寄一封 AI 生成的鼓勵信給你，告訴你這週有多棒。</div>
+    <div class="email-row">
+      <input class="field-input" id="eIn" placeholder="你的 Gmail 地址" style="flex:1" />
+      <button class="btn-main" onclick="saveEmail()" style="white-space:nowrap">設定</button>
+    </div>
+    <div id="eSt" style="font-size:12px;color:var(--green);margin-top:8px;display:none"></div>
+    <div class="report-acts">
+      <button class="btn-out" onclick="previewRep()">預覽本週報告</button>
+      <button class="btn-out" onclick="sendNow()">立即寄出測試信</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-wrap" id="tWrap"></div>
+
+<div class="modal-bg" id="modal" onclick="closeM()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h2>本週成績單</h2>
+    <div class="modal-body" id="mBody"></div>
+    <div class="modal-foot">
+      <button class="btn-out" onclick="closeM()">關閉</button>
+      <button class="btn-main" onclick="sendNow()">寄出這封信</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let tasks = JSON.parse(localStorage.getItem('fp_t')||'[]');
+let cfg   = JSON.parse(localStorage.getItem('fp_c')||'{}');
+let hist  = JSON.parse(localStorage.getItem('fp_h')||'[]');
+
+function init() {
+  tick(); setInterval(tick, 30000);
+  addR(); addU();
+  if(cfg.email){document.getElementById('eIn').value=cfg.email;showES();}
+  chkN(); render();
+  setInterval(chkRem,60000); chkRem(); chkWeekly();
+}
+
+function tick(){document.getElementById('hDate').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'});}
+
+function render(){
+  const a=tasks.filter(t=>!t.done), d=tasks.filter(t=>t.done);
+  document.getElementById('aC').textContent=a.length?`${a.length} 項`:'';
+  rList('aList',a); rList('dList',d); stats();
+}
+
+function rList(id,list){
+  const el=document.getElementById(id);
+  if(!list.length){el.innerHTML=`<div class="empty">${id==='aList'?'沒有進行中的任務 ✦':'還沒有完成的任務'}</div>`;return;}
+  el.innerHTML=list.map(card).join('');
+}
+
+function card(t){
+  const dl=t.deadline?new Date(t.deadline).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  const fired=(t.reminders||[]).filter(r=>r.fired).length, total=(t.reminders||[]).length;
+  const chips=[
+    t.type==='urgent'?`<span class="chip cu">緊急</span>`:'',
+    t.type==='monitor'?`<span class="chip cm">定期查看</span>`:'',
+    dl?`<span class="chip cd">⏰ ${dl}</span>`:'',
+    total?`<span class="chip cr">提醒 ${fired}/${total}</span>`:'',
+    t.done?`<span class="chip ck">完成</span>`:'',
+  ].join('');
+
+  const urlsH=(t.urls||[]).length?`
+    <div class="esec"><div class="elabel">相關網址</div>
+    ${t.urls.map((u,i)=>`<div class="url-row">
+      <span class="url-tag">${e(u.label||'網址')}</span>
+      <a class="url-link" href="${e(u.url)}" target="_blank">${e(u.url)}</a>
+      <button class="btn-x" style="width:24px;height:24px;font-size:11px" onclick="dUrl('${t.id}',${i})">✕</button>
+    </div>`).join('')}</div>`:''
+
+  const remH=(t.reminders||[]).length?`
+    <div class="esec"><div class="elabel">提醒時間表</div>
+    ${t.reminders.map(r=>`<div class="rem-row">
+      <span>${new Date(r.time).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+      <span class="rs ${r.fired?'ok':''}">${r.fired?'已提醒':'等待中'}</span>
+    </div>`).join('')}</div>`:''
+
+  const noteH=t.note?`<div class="esec"><div class="enote">${e(t.note)}</div></div>`:''
+
+  return `<div class="task-card ${t.done?'done':''}" id="c-${t.id}">
+    <div class="task-row" onclick="exp('${t.id}')">
+      <div class="chk ${t.done?'on':''}" onclick="event.stopPropagation();tog('${t.id}')">${t.done?'✓':''}</div>
+      <div class="task-body">
+        <div class="task-title">${e(t.title)}</div>
+        <div class="chips">${chips}</div>
+      </div>
+      <div class="task-acts">
+        <button class="tbtn" id="ep-${t.id}">▾</button>
+        <button class="tbtn del" onclick="event.stopPropagation();del('${t.id}')">✕</button>
+      </div>
+    </div>
+    <div class="task-expand" id="ex-${t.id}">
+      <div class="expand-in">
+        ${noteH}${urlsH}
+        <div class="esec"><div class="elabel">新增網址</div>
+          <div class="add-url-inline">
+            <input class="field-input" id="ul-${t.id}" placeholder="說明" style="max-width:120px;font-size:12px;padding:7px 10px" />
+            <input class="field-input" id="uu-${t.id}" placeholder="https://…" style="font-size:12px;padding:7px 10px" />
+            <button class="btn-x" onclick="aUt('${t.id}')">+</button>
+          </div>
+        </div>
+        ${remH}
+      </div>
+    </div>
+  </div>`;
+}
+
+function exp(id){
+  const x=document.getElementById(`ex-${id}`),b=document.getElementById(`ep-${id}`);
+  const o=x.classList.toggle('open'); b.textContent=o?'▴':'▾';
+}
+
+function tog(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  t.done=!t.done;
+  if(t.done){t.doneAt=Date.now();t.onTime=t.deadline?Date.now()<=new Date(t.deadline).getTime():true;pop();}
+  sv();render();
+}
+
+function del(id){tasks=tasks.filter(x=>x.id!==id);sv();render();}
+
+function dUrl(tid,i){const t=tasks.find(x=>x.id===tid);if(!t)return;t.urls.splice(i,1);sv();render();setTimeout(()=>exp(tid),10);}
+
+function aUt(tid){
+  const t=tasks.find(x=>x.id===tid),l=document.getElementById(`ul-${tid}`).value.trim(),u=document.getElementById(`uu-${tid}`).value.trim();
+  if(!u){toast('請輸入網址');return;}
+  if(!t.urls)t.urls=[];
+  t.urls.push({label:l||'網址',url:u});sv();render();setTimeout(()=>exp(tid),10);
+}
+
+let pendingPresets=[];
+const PRESETS={
+  '1d':     {label:'前一天',     daily:null, offset:function(dl){return dl-86400000;}},
+  '3h':     {label:'前3小時',   daily:null, offset:function(dl){return dl-10800000;}},
+  '1h':     {label:'前1小時',   daily:null, offset:function(dl){return dl-3600000;}},
+  '30m':    {label:'前30分鐘',  daily:null, offset:function(dl){return dl-1800000;}},
+  'daily9': {label:'每天 09:00',daily:9,    offset:null},
+  'daily21':{label:'每天 21:00',daily:21,   offset:null},
+};
+
+function addPreset(key){
+  if(pendingPresets.find(function(p){return p.key===key;}))return;
+  pendingPresets.push({key:key,label:PRESETS[key].label});
+  renderPTags();
+}
+
+function removePreset(key){
+  pendingPresets=pendingPresets.filter(function(p){return p.key!==key;});
+  renderPTags();
+}
+
+function renderPTags(){
+  var tags=pendingPresets.map(function(p){
+    return '<span class="preset-tag">⏰ '+p.label+' <button onclick="removePreset(\'' + p.key + '\')">✕</button></span>';
+  }).join('');
+  document.getElementById('presetTags').innerHTML=tags;
+}
+
+function buildReminders(dlStr){
+  var out=[];
+  var dl=dlStr?new Date(dlStr).getTime():null;
+  pendingPresets.forEach(function(p){
+    var cfg=PRESETS[p.key];
+    if(cfg.daily!==null){
+      for(var i=0;i<14;i++){
+        var d=new Date();d.setDate(d.getDate()+i);d.setHours(cfg.daily,0,0,0);
+        if(d.getTime()>Date.now())out.push({time:d.getTime(),fired:false,label:p.label});
+      }
+    } else if(dl){
+      var t=cfg.offset(dl);
+      if(t>Date.now())out.push({time:t,fired:false,label:p.label});
+    }
+  });
+  document.querySelectorAll('.ri').forEach(function(el){
+    if(el.value)out.push({time:new Date(el.value).getTime(),fired:false,label:'自訂'});
+  });
+  return out;
+}
+
+function addTask(){
+  const title=document.getElementById('iT').value.trim();
+  if(!title){toast('請輸入任務名稱');return;}
+  const reminders=buildReminders(document.getElementById('iD').value);
+  const urls=[];
+  document.querySelectorAll('.ur').forEach(row=>{
+    const l=row.querySelector('.ul').value.trim(),u=row.querySelector('.uu').value.trim();
+    if(u)urls.push({label:l||'網址',url:u});
+  });
+  tasks.unshift({
+    id:Date.now().toString(),title,
+    deadline:document.getElementById('iD').value,
+    type:document.getElementById('iK').value,
+    note:document.getElementById('iN').value.trim(),
+    urls,reminders,done:false,doneAt:null,onTime:false,createdAt:Date.now()
+  });
+  sv();render();chkRem();
+  ['iT','iN'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('iD').value='';document.getElementById('iK').value='normal';
+  document.getElementById('rBlock').innerHTML='';document.getElementById('uBlock').innerHTML='';
+  pendingPresets=[];renderPTags();
+  addR();addU();toast('任務建立');
+}
+
+function addR(){
+  const b=document.getElementById('rBlock'),d=document.createElement('div');
+  d.className='entry';
+  d.innerHTML=`<input class="field-input ri" type="datetime-local" style="flex:1;font-size:13px;padding:8px 12px" /><button class="btn-x" onclick="this.parentElement.remove()">✕</button>`;
+  b.appendChild(d);
+}
+
+function addU(){
+  const b=document.getElementById('uBlock'),d=document.createElement('div');
+  d.className='entry ur';
+  d.innerHTML=`<input class="field-input ul" placeholder="說明" style="max-width:120px;font-size:13px;padding:8px 12px" /><input class="field-input uu" placeholder="https://…" style="font-size:13px;padding:8px 12px" /><button class="btn-x" onclick="this.parentElement.remove()">✕</button>`;
+  b.appendChild(d);
+}
+
+let dv=false;
+function toggleDone(){
+  dv=!dv;
+  document.getElementById('dSec').style.display=dv?'block':'none';
+  document.getElementById('dBtn').textContent=dv?'▾ 隱藏已完成':'▸ 顯示已完成';
+}
+
+function stats(){
+  const now=Date.now(),ws=now-7*86400000;
+  const wt=tasks.filter(t=>t.createdAt>ws||(t.doneAt&&t.doneAt>ws));
+  const wd=tasks.filter(t=>t.done&&t.doneAt>ws).length;
+  document.getElementById('sD').textContent=wd;
+  document.getElementById('sU').textContent=tasks.filter(t=>!t.done&&t.type==='urgent').length;
+  document.getElementById('sR').textContent=wt.length?Math.round(wd/wt.length*100)+'%':'—';
+  document.getElementById('sS').textContent=hist.filter(w=>w.done>0).length||0;
+}
+
+function chkRem(){
+  const now=Date.now();
+  tasks.forEach(t=>{
+    if(t.done||!t.reminders)return;
+    t.reminders.forEach(r=>{
+      if(!r.fired&&r.time<=now){
+        r.fired=true;
+        ntf(t.title,t.deadline?`截止：${new Date(t.deadline).toLocaleString('zh-TW')}`:'記得處理');
+      }
+    });
+  });sv();
+}
+
+function ntf(title,body){
+  if(Notification.permission==='granted')new Notification('FocusPal 提醒',{body:`${title}\n${body}`});
+  else toast(`提醒：${title}`);
+}
+
+function chkN(){if(Notification.permission==='default')document.getElementById('nBar').style.display='flex';}
+function reqN(){Notification.requestPermission().then(p=>{if(p==='granted'){document.getElementById('nBar').style.display='none';toast('通知已開啟');}});}
+
+function saveEmail(){
+  const em=document.getElementById('eIn').value.trim();
+  if(!em||!em.includes('@')){toast('請輸入有效 Email');return;}
+  cfg.email=em;svc();showES();toast('Email 已設定');
+}
+
+function showES(){const el=document.getElementById('eSt');el.textContent=`將寄送至 ${cfg.email}，每週日晚上 9 點`;el.style.display='block';}
+
+async function previewRep(){const s=wStats(),txt=await gen(s);document.getElementById('mBody').textContent=txt;document.getElementById('modal').style.display='flex';}
+
+async function sendNow(){
+  if(!cfg.email){toast('請先設定 Email');return;}
+  toast('正在生成週報…');closeM();
+  const s=wStats(),txt=await gen(s);
+  window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(cfg.email)}&su=${encodeURIComponent(`FocusPal 週報：你這週完成了 ${s.done} 件事 🎉`)}&body=${encodeURIComponent(txt)}`,'_blank');
+  toast('Gmail 已開啟，確認後送出');
+  hist.push({week:wk(),done:s.done});localStorage.setItem('fp_h',JSON.stringify(hist));
+}
+
+function wStats(){
+  const now=Date.now(),ws=now-7*86400000;
+  const wt=tasks.filter(t=>t.createdAt>ws||(t.doneAt&&t.doneAt>ws));
+  const done=wt.filter(t=>t.done);
+  return{done:done.length,total:wt.length,onTime:done.filter(t=>t.onTime).length,names:done.map(t=>t.title),streak:hist.filter(w=>w.done>0).length,rate:wt.length?Math.round(done.length/wt.length*100):0};
+}
+
+async function gen(s){
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`你是 FocusPal，專為成人 ADD 設計的任務助手。用繁體中文寫溫暖鼓勵的週報信。\n\n完成 ${s.done} 件（共 ${s.total} 件），完成率 ${s.rate}%，準時 ${s.onTime} 件，連續 ${s.streak} 週，完成任務：${s.names.length?s.names.join('、'):'暫無'}\n\n200-300 字，具體稱讚，低完成率時同理而非責備，全程正面，不用「但是」「雖然」，署名「你的 FocusPal」`}]})});
+    const d=await r.json();return d.content?.[0]?.text||fb(s);
+  }catch{return fb(s);}
+}
+
+function fb(s){return`嘿！\n\n這週你完成了 ${s.done} 件任務，完成率 ${s.rate}%。${s.names.length?'\n\n你完成的任務：\n'+s.names.map(n=>`• ${n}`).join('\n'):''}\n\n${s.streak>0?`已經連續 ${s.streak} 週在用 FocusPal 了，超厲害！`:''}\n\n不管這週完成多少，你都很努力了。下週繼續！\n\n你的 FocusPal`;}
+
+function checkWeekly(){const now=new Date();if(now.getDay()===0&&now.getHours()>=21&&cfg.email&&localStorage.getItem('fp_lw')!==wk()){localStorage.setItem('fp_lw',wk());sendNow();}}
+function chkWeekly(){checkWeekly();}
+function wk(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()}-W${Math.ceil(d.getDate()/7)}`;}
+
+function pop(){
+  ['#16a34a','#d97706','#2563eb','#c2410c'].forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.style.cssText=`position:fixed;width:7px;height:7px;border-radius:50%;background:${c};pointer-events:none;z-index:200;transition:all 0.8s ease-out;left:50%;top:50%`;
+    document.body.appendChild(el);
+    setTimeout(()=>{el.style.left=(50+(Math.random()-.5)*30)+'%';el.style.top=(35-Math.random()*20)+'%';el.style.opacity='0';},20);
+    setTimeout(()=>el.remove(),900);
+  });
+}
+
+function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.getElementById('tWrap').appendChild(el);setTimeout(()=>el.remove(),2800);}
+function closeM(){document.getElementById('modal').style.display='none';}
+function sv(){localStorage.setItem('fp_t',JSON.stringify(tasks));}
+function svc(){localStorage.setItem('fp_c',JSON.stringify(cfg));}
+function e(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+init();
+</script>
+</body>
+</html>
