@@ -484,6 +484,11 @@
       <div>
         <label class="field-label">截止日期</label>
         <input class="field-input" id="iD" type="datetime-local" />
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <button class="preset-btn" onclick="setDeadlineQuick('today')">今天 23:59</button>
+          <button class="preset-btn" onclick="setDeadlineQuick('today_jp')">今天 22:59 🇯🇵</button>
+          <button class="preset-btn" onclick="setDeadlineQuick('tomorrow')">明天 23:59</button>
+        </div>
       </div>
       <div>
         <label class="field-label">類型</label>
@@ -502,8 +507,8 @@
         <button class="preset-btn" onclick="addPreset('3h')">前3小時</button>
         <button class="preset-btn" onclick="addPreset('1h')">前1小時</button>
         <button class="preset-btn" onclick="addPreset('30m')">前30分鐘</button>
-        <button class="preset-btn" onclick="addPreset('daily9')">每天早上9點</button>
-        <button class="preset-btn" onclick="addPreset('daily21')">每天晚上9點</button>
+        <button class="preset-btn" onclick="addPreset('daily11')">每天上午11點</button>
+        <button class="preset-btn" onclick="addPreset('daily21')">每天晚上21點</button>
         <button class="preset-btn" onclick="addR()">自訂時間…</button>
       </div>
       <div id="presetTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
@@ -550,6 +555,29 @@
     </div>
   </div>
 
+  <!-- 個人設定 -->
+  <div class="report-section" id="settingsSection">
+    <h2>個人設定</h2>
+    <div class="report-sub">設定你習慣查看手機的時間，固定提醒會在這兩個時間點提醒你。</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <label class="field-label">早上提醒時間</label>
+        <input class="field-input" id="cfgMorning" type="time" value="11:00" />
+      </div>
+      <div>
+        <label class="field-label">晚上提醒時間</label>
+        <input class="field-input" id="cfgEvening" type="time" value="21:00" />
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn-main" onclick="saveTimeCfg()">儲存時間設定</button>
+      <div id="timeCfgStatus" style="font-size:12px;color:var(--green);display:none">✅ 已儲存</div>
+    </div>
+    <div style="font-size:12px;color:var(--ink3);margin-top:10px;line-height:1.7">
+      設定儲存在你的瀏覽器裡，關掉 App 也不會消失。
+    </div>
+  </div>
+
   <!-- GitHub 同步 -->
   <div class="report-section" id="githubSection">
     <h2>Line Bot 同步</h2>
@@ -584,6 +612,15 @@ function init() {
   tick(); setInterval(tick, 30000);
   addR(); addU();
   if(cfg.email){document.getElementById('eIn').value=cfg.email;showES();}
+  // load time settings
+  if(cfg.morningHour!==undefined){
+    const mh=String(cfg.morningHour).padStart(2,'0'), mm=String(cfg.morningMin??0).padStart(2,'0');
+    document.getElementById('cfgMorning').value=mh+':'+mm;
+  }
+  if(cfg.eveningHour!==undefined){
+    const eh=String(cfg.eveningHour).padStart(2,'0'), em=String(cfg.eveningMin??0).padStart(2,'0');
+    document.getElementById('cfgEvening').value=eh+':'+em;
+  }
   chkN(); render();
   setInterval(chkRem,60000); chkRem(); chkWeekly();
   setTimeout(fetchFromGitHub, 1500);
@@ -656,6 +693,14 @@ function card(t){
       <input class="field-input" id="ed-dl-${t.id}" type="datetime-local" value="${t.deadline||''}" style="flex:1;font-size:12px;padding:7px 10px" />
     </div>
     <div class="edit-row">
+      <span class="edit-label"></span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineQuick('${t.id}','today')">今天 23:59</button>
+        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineQuick('${t.id}','today_jp')">今天 22:59 🇯🇵</button>
+        <button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="setEditDeadlineQuick('${t.id}','tomorrow')">明天 23:59</button>
+      </div>
+    </div>
+    <div class="edit-row">
       <span class="edit-label">類型</span>
       <select class="field-input" id="ed-tp-${t.id}" style="flex:1;font-size:12px;padding:7px 10px">
         <option value="normal" ${(!t.type||t.type==='normal')?'selected':''}>一般任務</option>
@@ -666,7 +711,7 @@ function card(t){
     <div class="edit-row">
       <span class="edit-label">提醒</span>
       <div style="display:flex;flex-wrap:wrap;gap:6px;flex:1">
-        ${['前一天','前3小時','前1小時','前30分鐘','每天 09:00','每天 21:00'].map(p=>`<button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="addPresetToTask('${t.id}','${p}')">${p}</button>`).join('')}
+        ${['前一天','前3小時','前1小時','前30分鐘','每天 11:00','每天 21:00'].map(p=>{ const lbl=p==='每天 11:00'?`每天 ${String(cfg.morningHour??11).padStart(2,'0')}:${String(cfg.morningMin??0).padStart(2,'0')}`:p==='每天 21:00'?`每天 ${String(cfg.eveningHour??21).padStart(2,'0')}:${String(cfg.eveningMin??0).padStart(2,'0')}`:p; return `<button class="preset-btn" style="font-size:11px;padding:4px 8px" onclick="addPresetToTask('${t.id}','${p}')">${lbl}</button>`; }).join('')}
       </div>
     </div>
     <div class="edit-row">
@@ -737,7 +782,7 @@ const PRESETS={
   '3h':     {label:'前3小時',   daily:null, offset:function(dl){return dl-10800000;}},
   '1h':     {label:'前1小時',   daily:null, offset:function(dl){return dl-3600000;}},
   '30m':    {label:'前30分鐘',  daily:null, offset:function(dl){return dl-1800000;}},
-  'daily9': {label:'每天 09:00',daily:9,    offset:null},
+  'daily11': {label:'每天 11:00',daily:11,   offset:null},
   'daily21':{label:'每天 21:00',daily:21,   offset:null},
 };
 
@@ -976,6 +1021,53 @@ function setSort(mode) {
   render();
 }
 
+function saveTimeCfg() {
+  const morning = document.getElementById('cfgMorning').value || '11:00';
+  const evening = document.getElementById('cfgEvening').value || '21:00';
+  cfg.morningHour = parseInt(morning.split(':')[0]);
+  cfg.morningMin  = parseInt(morning.split(':')[1]);
+  cfg.eveningHour = parseInt(evening.split(':')[0]);
+  cfg.eveningMin  = parseInt(evening.split(':')[1]);
+  svc();
+  const el = document.getElementById('timeCfgStatus');
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 2500);
+  toast('提醒時間已儲存！');
+}
+
+function getDailyHourMin(type) {
+  if (type === 'morning') {
+    return { h: cfg.morningHour ?? 11, m: cfg.morningMin ?? 0 };
+  } else {
+    return { h: cfg.eveningHour ?? 21, m: cfg.eveningMin ?? 0 };
+  }
+}
+
+
+function fmtLocalDatetime(d) {
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function getQuickDeadline(type) {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (type === 'today')    { d.setHours(23,59,0,0); }
+  if (type === 'today_jp') { d.setHours(22,59,0,0); }
+  if (type === 'tomorrow') { d.setDate(d.getDate()+1); d.setHours(23,59,0,0); }
+  return fmtLocalDatetime(d);
+}
+
+function setDeadlineQuick(type) {
+  document.getElementById('iD').value = getQuickDeadline(type);
+}
+
+function setEditDeadlineQuick(id, type) {
+  const el = document.getElementById('ed-dl-'+id);
+  if (el) el.value = getQuickDeadline(type);
+}
+
+
 function deadlineState(t) {
   if (!t.deadline || t.done) return 'normal';
   const now = Date.now();
@@ -1040,9 +1132,9 @@ function addPresetToTask(id, label) {
   let time;
   if (presetMap[label]) {
     time = presetMap[label];
-  } else if (label === '每天 09:00' || label === '每天 21:00') {
-    const hr = label.includes('09') ? 9 : 21;
-    const d = new Date(); d.setHours(hr,0,0,0);
+  } else if (label === '每天 11:00' || label === '每天 21:00') {
+    const hm = label.includes('11') ? getDailyHourMin('morning') : getDailyHourMin('evening');
+    const d = new Date(); d.setHours(hm.h,hm.m,0,0);
     if (d.getTime() <= Date.now()) d.setDate(d.getDate()+1);
     time = d.getTime();
   }
